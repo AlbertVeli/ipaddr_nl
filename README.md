@@ -6,8 +6,11 @@ more calls to the [netlink api](https://www.infradead.org/~tgr/libnl/doc/api/gro
 
 This will only work on platforms where netlink is available (i.e. GNU/Linux)
 
+* ipaddr\_nl: List network addresses
+* iplink\_nl: List network links
+
 Pungenday, the 45th day of Discord in the YOLD 3186
 
 Albert Veli
 
-License: LGPLv2 (same as libnl, which it uses)
+License: LGPLv2 (same as libnl)

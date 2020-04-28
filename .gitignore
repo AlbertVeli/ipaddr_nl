@@ -1,2 +1,5 @@
 ipaddr_nl
+iplink_nl
 *.o
+.gdb_history
+core

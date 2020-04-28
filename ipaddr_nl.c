@@ -11,6 +11,7 @@
  */
 #include <stdio.h>
 #include <net/if.h>
+#include <netlink/netlink.h>
 #include <netlink/route/addr.h>
 
 /* If !free, alloc nl_sock else free previously allocated one */
@@ -44,7 +45,7 @@ static struct nl_sock *cached_nl_sock(int free)
 }
 
 /* callback for nl_cache_foreach, below */
-static void addr_cb(struct nl_object *o, void *data)
+static void __addr_cb(struct nl_object *o, void *data)
 {
 	char buf[64];
 	int ifindex = (int)(intptr_t)data;
@@ -58,7 +59,7 @@ static void addr_cb(struct nl_object *o, void *data)
 		return;
 
 	const struct nl_addr *local = rtnl_addr_get_local(addr);
-	if (NULL == local) {
+	if (!local) {
 		return;
 	}
 
@@ -95,7 +96,7 @@ int print_ifaces(void)
 
 	for (i = if_ni; !(i->if_index == 0 && i->if_name == NULL); i++) {
 		printf("%u: %s", i->if_index, i->if_name);
-		nl_cache_foreach(addr_cache, addr_cb, (void*)(intptr_t)i->if_index);
+		nl_cache_foreach(addr_cache, __addr_cb, (void*)(intptr_t)i->if_index);
 		printf("\n");
 	}
 
