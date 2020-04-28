@@ -7,7 +7,7 @@
  *
  * Albert Veli
  *
- * License: GPLv2 (required by libnl)
+ * License: LGPLv2 (same as libnl)
  */
 #include <stdio.h>
 #include <net/if.h>

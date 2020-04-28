@@ -10,4 +10,4 @@ Pungenday, the 45th day of Discord in the YOLD 3186
 
 Albert Veli
 
-License: GPLv2 (as required by libnl)
+License: LGPLv2 (same as libnl, which it uses)
