@@ -14,6 +14,30 @@
 #include <netlink/netlink.h>
 #include <netlink/route/addr.h>
 
+/* From libiproute2 (rt_names.c) */
+static char *rtnl_rtscope_tab[256] = {
+	[RT_SCOPE_UNIVERSE]  = "global",
+	[RT_SCOPE_NOWHERE]   = "nowhere",
+	[RT_SCOPE_HOST]      = "host",
+	[RT_SCOPE_LINK]      = "link",
+	[RT_SCOPE_SITE]      = "site",
+};
+
+/* From libiproute2 (rt_names.c) */
+const char *rtnl_rtscope_n2a(int id, char *buf, int len)
+{
+	if (id < 0 || id >= 256) {
+		snprintf(buf, len, "%d", id);
+		return buf;
+	}
+
+	if (rtnl_rtscope_tab[id])
+		return rtnl_rtscope_tab[id];
+
+	snprintf(buf, len, "%d", id);
+	return buf;
+}
+
 /* If !free, alloc nl_sock else free previously allocated one */
 static struct nl_sock *cached_nl_sock(int free)
 {
@@ -45,11 +69,19 @@ static struct nl_sock *cached_nl_sock(int free)
 }
 
 /* callback for nl_cache_foreach, below */
-static void __addr_cb(struct nl_object *o, void *data)
+static void __addr_cb(struct nl_object *obj, void *data)
 {
-	char buf[64];
+	char addrbuf[64];
+	char brdbuf[32];
+	char brdbuf2[64];
+	char inetbuf[16];
+	char scopebuf[64];
 	int ifindex = (int)(intptr_t)data;
-	struct rtnl_addr *addr = (struct rtnl_addr *)o;
+	struct rtnl_addr *addr = (struct rtnl_addr *)obj;
+	int family;
+	int scope;
+	const char *p;
+
 	if (!addr) {
 		return;
 	}
@@ -63,14 +95,36 @@ static void __addr_cb(struct nl_object *o, void *data)
 		return;
 	}
 
-	const char *addr_s = nl_addr2str(local, buf, sizeof(buf));
-	if (!addr_s) {
+	p = nl_addr2str(local, addrbuf, sizeof(addrbuf));
+	if (!p) {
 		return;
 	}
-	printf("\n   %s (%d)", addr_s, nl_addr_get_family(local));
+
+	const struct nl_addr *brd = rtnl_addr_get_broadcast(addr);
+	if (!brd) {
+		strcpy(brdbuf2, "");
+	} else {
+		p = nl_addr2str(brd, brdbuf, sizeof(brdbuf));
+		if (!p) {
+			strcpy(brdbuf2, "");
+		} else {
+			snprintf(brdbuf2, sizeof(brdbuf2), " brd %s", brdbuf);
+		}
+	}
+
+	scope = rtnl_addr_get_scope(addr);
+	p = rtnl_rtscope_n2a(scope, scopebuf, sizeof(scopebuf));
+
+	family = nl_addr_get_family(local);
+	nl_af2str(family, inetbuf, sizeof(inetbuf));
+	printf("\n    %s %s%s scope %s", inetbuf, addrbuf, brdbuf2, p);
 }
 
-/* Loop through all interfaces and print if_index, if_name and IP address(es) */
+/* Loop through all interfaces and print if_index, if_name and IP address(es)
+ *
+ * Based on example code for man page if_nameindex
+ * https://linux.die.net/man/3/if_nameindex
+ */
 int print_ifaces(void)
 {
 	struct if_nameindex *if_ni, *i;
@@ -96,6 +150,7 @@ int print_ifaces(void)
 
 	for (i = if_ni; !(i->if_index == 0 && i->if_name == NULL); i++) {
 		printf("%u: %s", i->if_index, i->if_name);
+		/* One interface can have more than one address attached */
 		nl_cache_foreach(addr_cache, __addr_cb, (void*)(intptr_t)i->if_index);
 		printf("\n");
 	}
