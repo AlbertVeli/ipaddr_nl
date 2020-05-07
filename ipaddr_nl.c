@@ -10,6 +10,7 @@
  * License: LGPLv2 (same as libnl)
  */
 #include <stdio.h>
+#include <string.h>
 #include <net/if.h>
 #include <netlink/netlink.h>
 #include <netlink/route/addr.h>
